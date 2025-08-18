@@ -1,39 +1,65 @@
+
 // api/chat.js
 export default async function handler(req, res) {
   try {
-    if (req.method !== 'POST') return res.status(405).end();
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST' });
+
     const body = await read(req);
     const { messages = [] } = body;
+
+    // Hard guard: missing key
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ error: 'Missing OPENAI_API_KEY on server' });
+    }
 
     const system = {
       role: 'system',
       content:
-        "You are SoulSync, a warm, supportive companion. Use CBT-style reframing when helpful. Keep answers concise and kind."
+        'You are SoulSync, a warm, supportive companion. Use CBT-style reframing when helpful. Keep answers concise and kind.',
     };
 
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [system, ...messages],
-        temperature: 0.7
-      })
+        temperature: 0.7,
+      }),
     });
 
-    if (!r.ok) return res.status(500).json({ error: await r.text() });
+    if (!r.ok) {
+      const text = await r.text();
+      // Return the upstream error so the UI can show it
+      return res.status(500).json({ error: `OpenAI error: ${text}` });
+    }
+
     const data = await r.json();
-    res.status(200).json({ answer: data.choices?.[0]?.message?.content || '' });
+    const answer = data?.choices?.[0]?.message?.content || '';
+
+    if (!answer) {
+      return res.status(200).json({ answer: '', warn: 'Empty answer from model' });
+    }
+
+    res.status(200).json({ answer });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: e?.message || String(e) });
   }
 }
-function read(req){
-  return new Promise((resolve,reject)=>{
-    let b=''; req.on('data',c=>b+=c);
-    req.on('end',()=>{ try{ resolve(JSON.parse(b||'{}')) } catch(e){ reject(e) }});
+
+function read(req) {
+  return new Promise((resolve, reject) => {
+    let b = '';
+    req.on('data', (c) => (b += c));
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(b || '{}'));
+      } catch (e) {
+        reject(e);
+      }
+    });
   });
 }
