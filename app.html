@@ -1,29 +1,37 @@
-<!doctype html><html lang="en"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SoulSync App</title><link rel="stylesheet" href="styles.css">
-<style>
-.chat{max-width:900px;margin:32px auto;padding:0 24px 64px}
-.row{display:flex;gap:8px;margin-top:10px}
-.bubble{padding:12px 14px;border:1px solid #273142;border-radius:12px;background:#121826;margin:6px 0;max-width:720px}
-.me{border-color:#334155}.bot{border-color:#7c3aed}
-</style></head><body>
-<header><div class="logo">🧬 SoulSync AI</div><nav>
-<a href="index.html">Home</a><a href="about.html">About</a><a href="register.html">Register</a><a class="cta" href="app.html">Open App</a>
-</nav></header>
-<main class="chat"><h1>Talk to your SoulSync</h1><div id="log"></div>
-<div class="row">
-  <input id="text" placeholder="Type a message…" style="flex:1;padding:12px;border-radius:10px;border:1px solid #2a3340;background:#0f141b;color:#e8ecf2"/>
-  <button id="send" class="btn primary">Send</button>
-</div></main>
 <script>
 const log=document.getElementById('log'),text=document.getElementById('text'),send=document.getElementById('send');
 const messages=[{role:'system',content:'You are SoulSync, a caring, supportive companion.'}];
-function add(c,me=false){const d=document.createElement('div');d.className='bubble '+(me?'me':'bot');d.textContent=c;log.appendChild(d);log.scrollTop=log.scrollHeight;}
+
+function add(c,me=false){
+  const d=document.createElement('div');
+  d.className='bubble '+(me?'me':'bot');
+  d.textContent=c;
+  log.appendChild(d);
+  log.scrollTop=log.scrollHeight;
+}
+
 async function chatSend(t){
-  if(!t) return; add(t,true); messages.push({role:'user',content:t});
-  const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages})});
-  const data=await r.json(); add(data.answer||'(no response)'); messages.push({role:'assistant',content:data.answer||''});
+  if(!t) return;
+  add(t,true); messages.push({role:'user',content:t});
+  try{
+    const r=await fetch('/api/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages})
+    });
+    const data=await r.json();
+    if(!r.ok || data.error){
+      add('⚠️ '+(data.error || 'Server error'));  // show real error
+      return;
+    }
+    const ans = data.answer || '(empty answer)';
+    add(ans);
+    messages.push({role:'assistant',content:ans});
+  }catch(e){
+    add('⚠️ Network error: '+e.message);
+  }
 }
 send.onclick=()=>{ chatSend(text.value); text.value=''; };
-</script></body></html>
+</script>
+
 
