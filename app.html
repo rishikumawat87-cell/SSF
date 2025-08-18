@@ -6,38 +6,24 @@
 .row{display:flex;gap:8px;margin-top:10px}
 .bubble{padding:12px 14px;border:1px solid #273142;border-radius:12px;background:#121826;margin:6px 0;max-width:720px}
 .me{border-color:#334155}.bot{border-color:#7c3aed}
-.mic{padding:10px 12px;border:1px solid #2a3340;border-radius:10px} audio{width:100%;margin-top:8px}
 </style></head><body>
 <header><div class="logo">🧬 SoulSync AI</div><nav>
 <a href="index.html">Home</a><a href="about.html">About</a><a href="register.html">Register</a><a class="cta" href="app.html">Open App</a>
 </nav></header>
-<main class="chat">
-<h1>Talk to your SoulSync</h1><div id="log"></div>
+<main class="chat"><h1>Talk to your SoulSync</h1><div id="log"></div>
 <div class="row">
-<input id="text" placeholder="Type a message…" style="flex:1;padding:12px;border-radius:10px;border:1px solid #2a3340;background:#0f141b;color:#e8ecf2"/>
-<button id="send" class="btn primary">Send</button>
-<button id="mic" class="mic">🎤 Hold to talk</button>
-</div>
-<audio id="player" controls></audio>
-</main>
+  <input id="text" placeholder="Type a message…" style="flex:1;padding:12px;border-radius:10px;border:1px solid #2a3340;background:#0f141b;color:#e8ecf2"/>
+  <button id="send" class="btn primary">Send</button>
+</div></main>
 <script>
-const log=document.getElementById('log'),text=document.getElementById('text'),send=document.getElementById('send'),mic=document.getElementById('mic'),player=document.getElementById('player');
+const log=document.getElementById('log'),text=document.getElementById('text'),send=document.getElementById('send');
 const messages=[{role:'system',content:'You are SoulSync, a caring, supportive companion.'}];
-function addBubble(c,who='bot'){const d=document.createElement('div');d.className='bubble '+(who==='me'?'me':'bot');d.textContent=c;log.appendChild(d);log.scrollTop=log.scrollHeight;}
-async function chatSend(userText){ if(!userText) return; addBubble(userText,'me'); messages.push({role:'user',content:userText});
-  const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages,userId:'demo'})});
-  const data=await r.json(); const answer=data.answer||'(no response)'; messages.push({role:'assistant',content:answer}); addBubble(answer,'bot');
-  try{const tts=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:answer})});
-    if(tts.ok){const blob=await tts.blob(); player.src=URL.createObjectURL(blob); player.play().catch(()=>{});}
-  }catch(e){} }
-send.onclick=()=>{chatSend(text.value); text.value='';};
-let mediaStream,mediaRecorder,chunks=[];
-mic.onmousedown=async()=>{ try{
-  mediaStream=await navigator.mediaDevices.getUserMedia({audio:true}); chunks=[];
-  mediaRecorder=new MediaRecorder(mediaStream,{mimeType:'audio/webm'}); mediaRecorder.ondataavailable=e=>chunks.push(e.data);
-  mediaRecorder.onstop=async()=>{ const blob=new Blob(chunks,{type:'audio/webm'}); const form=new FormData(); form.append('file',blob,'speech.webm'); form.append('model','whisper-1');
-    const r=await fetch('/api/whisper',{method:'POST',body:form}); const data=await r.json(); const t=data.text||''; if(t){ text.value=t; chatSend(t); }
-    mediaStream.getTracks().forEach(t=>t.stop()); };
-  mediaRecorder.start(); mic.textContent='◼️ Release to send'; } catch(e){ alert('Mic permission denied. You can still type.'); } };
-mic.onmouseup=()=>{ if(mediaRecorder&&mediaRecorder.state!=='inactive'){ mediaRecorder.stop(); mic.textContent='🎤 Hold to talk'; } };
+function add(c,me=false){const d=document.createElement('div');d.className='bubble '+(me?'me':'bot');d.textContent=c;log.appendChild(d);log.scrollTop=log.scrollHeight;}
+async function chatSend(t){
+  if(!t) return; add(t,true); messages.push({role:'user',content:t});
+  const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages})});
+  const data=await r.json(); add(data.answer||'(no response)'); messages.push({role:'assistant',content:data.answer||''});
+}
+send.onclick=()=>{ chatSend(text.value); text.value=''; };
 </script></body></html>
+
