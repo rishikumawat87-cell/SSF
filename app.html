@@ -33,14 +33,7 @@ async function chatSend(t){
 }
 send.onclick=()=>{ chatSend(text.value); text.value=''; };
 </script>
-<script>
-async function speak(text){
-  try{
-    const r=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
-    if(r.ok){ const blob=await r.blob(); new Audio(URL.createObjectURL(blob)).play().catch(()=>{}); }
-  }catch(e){}
-}
-</script>
+
 
 
 
